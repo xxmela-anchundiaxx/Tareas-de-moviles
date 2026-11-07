@@ -1,9 +1,77 @@
 import 'package:flutter/material.dart';
 
+// MODELO DE TAREA
+class Task {
+  const Task({
+    required this.id,
+    required this.title,
+    required this.description,
+    required this.priority,
+    required this.isCompleted,
+  });
+
+  final int id;
+  final String title;
+  final String description;
+  final String priority;
+  final bool isCompleted;
+
+  Task copyWith({bool? isCompleted}) {
+    return Task(
+      id: id,
+      title: title,
+      description: description,
+      priority: priority,
+      isCompleted: isCompleted ?? this.isCompleted,
+    );
+  }
+}
+
+// TAREAS DE EJEMPLO
+const demoTasks = [
+  Task(
+    id: 1,
+    title: 'Leer documentación',
+    description: 'Revisar ListView.builder',
+    priority: 'Alta',
+    isCompleted: false,
+  ),
+  Task(
+    id: 2,
+    title: 'Diseñar la pantalla',
+    description: 'Definir la tarjeta de tarea',
+    priority: 'Media',
+    isCompleted: false,
+  ),
+  Task(
+    id: 3,
+    title: 'Preparar evidencia',
+    description: 'Tomar captura del avance',
+    priority: 'Baja',
+    isCompleted: true,
+  ),
+  Task(
+    id: 4,
+    title: 'Organizar el backlog',
+    description: 'Priorizar pendientes',
+    priority: 'Alta',
+    isCompleted: false,
+  ),
+  Task(
+    id: 5,
+    title: 'Revisar código',
+    description: 'Ejecutar flutter analyze',
+    priority: 'Media',
+    isCompleted: false,
+  ),
+];
+
+// INICIO DE LA APLICACIÓN
 void main() {
   runApp(const TaskFlowApp());
 }
 
+// APLICACIÓN PRINCIPAL
 class TaskFlowApp extends StatelessWidget {
   const TaskFlowApp({super.key});
 
@@ -21,7 +89,7 @@ class TaskFlowApp extends StatelessWidget {
   }
 }
 
-// Pantalla principal con estado
+// PANTALLA PRINCIPAL
 class WelcomeScreen extends StatefulWidget {
   const WelcomeScreen({super.key});
 
@@ -30,52 +98,76 @@ class WelcomeScreen extends StatefulWidget {
 }
 
 class _WelcomeScreenState extends State<WelcomeScreen> {
-  // Nombre del estudiante
   final String studentName = 'Melanie Anchundia';
 
-  // Nombre de la asignatura
   final String courseName = 'Desarrollo de aplicaciones móviles';
 
-  // Mensaje motivacional
   final String motivationalMessage =
       '¡Organiza tus tareas y alcanza tus metas!';
 
-  // Variables de las tareas
-  int pendingTasks = 3;
-  int completedTasks = 0;
-  int dailyGoal = 5;
+  late List<Task> tasks;
 
-  // Función para agregar una tarea
+  final int dailyGoal = 5;
+
+  @override
+  void initState() {
+    super.initState();
+    tasks = List<Task>.from(demoTasks);
+  }
+
+  // CONTAR TAREAS PENDIENTES
+  int get pendingTasks => tasks.where((task) => !task.isCompleted).length;
+
+  // CONTAR TAREAS COMPLETADAS
+  int get completedTasks => tasks.where((task) => task.isCompleted).length;
+
+  // AGREGAR TAREA
   void _addTask() {
     setState(() {
-      pendingTasks++;
+      final newId = tasks.isEmpty
+          ? 1
+          : tasks.map((task) => task.id).reduce((a, b) => a > b ? a : b) + 1;
+
+      tasks.add(
+        Task(
+          id: newId,
+          title: 'Nueva tarea $newId',
+          description: 'Tarea agregada desde TaskFlow',
+          priority: 'Media',
+          isCompleted: false,
+        ),
+      );
     });
   }
 
-  // Función para completar una tarea
+  // COMPLETAR UNA TAREA
   void _completeTask() {
-    if (pendingTasks == 0) {
+    final index = tasks.indexWhere((task) => !task.isCompleted);
+
+    if (index == -1) {
       return;
     }
 
     setState(() {
-      pendingTasks--;
-
-      if (completedTasks < dailyGoal) {
-        completedTasks++;
-      }
+      tasks[index] = tasks[index].copyWith(isCompleted: true);
     });
+  }
+
+  // ABRIR PANTALLA DE TAREAS
+  void _openTaskList() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => TaskListScreen(tasks: tasks)),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
-    // Mensaje según las tareas pendientes
     final statusMessage = pendingTasks == 0
         ? '¡Excelente! No tienes tareas pendientes.'
         : 'Aún tienes tareas por organizar.';
 
-    // Progreso de la meta diaria
-    final double progress = completedTasks / dailyGoal;
+    final double progress = (completedTasks / dailyGoal).clamp(0.0, 1.0);
 
     return Scaffold(
       appBar: AppBar(
@@ -85,156 +177,198 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
         foregroundColor: Colors.white,
       ),
 
-      body: SingleChildScrollView(
+      body: ListView(
         padding: const EdgeInsets.all(24),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Icono de la aplicación
-            const Icon(Icons.task_alt, size: 56, color: Colors.indigo),
+        children: [
+          const Icon(Icons.task_alt, size: 56, color: Colors.indigo),
 
-            const SizedBox(height: 24),
+          const SizedBox(height: 24),
 
-            // Saludo
-            Text(
-              '¡Hola, $studentName!',
-              style: Theme.of(context).textTheme.headlineMedium,
-            ),
+          // SALUDO
+          Text(
+            '¡Hola, $studentName!',
+            style: Theme.of(context).textTheme.headlineMedium,
+          ),
 
-            const SizedBox(height: 12),
+          const SizedBox(height: 12),
 
-            // Nombre de la asignatura
-            Text('Bienvenido/a a $courseName.'),
+          Text('Bienvenido/a a $courseName.'),
 
-            const SizedBox(height: 12),
+          const SizedBox(height: 12),
 
-            // Mensaje motivacional
-            Text(
-              motivationalMessage,
-              style: const TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.w500,
-                color: Colors.indigo,
-              ),
-            ),
-
-            const SizedBox(height: 24),
-
-            // Mensaje de estado
-            Text(statusMessage, style: const TextStyle(fontSize: 16)),
-
-            const SizedBox(height: 24),
-
-            // Tarjeta de tareas pendientes
-            Card(
-              child: Padding(
-                padding: const EdgeInsets.all(20),
-                child: Row(
-                  children: [
-                    const Icon(Icons.pending_actions, color: Colors.indigo),
-
-                    const SizedBox(width: 12),
-
-                    Text('Tareas pendientes: $pendingTasks'),
-                  ],
-                ),
-              ),
-            ),
-
-            const SizedBox(height: 20),
-
-            // Tarjeta de tareas completadas
-            Card(
-              child: Padding(
-                padding: const EdgeInsets.all(20),
-                child: Row(
-                  children: [
-                    const Icon(Icons.check_circle, color: Colors.green),
-
-                    const SizedBox(width: 12),
-
-                    Text('Tareas completadas: $completedTasks'),
-                  ],
-                ),
-              ),
-            ),
-
-            const SizedBox(height: 28),
-
-            // Título de la meta diaria
-            Text(
-              'Mi meta diaria',
-              style: Theme.of(context).textTheme.titleLarge,
-            ),
-
-            const SizedBox(height: 12),
-
-            // Cantidad de tareas completadas
-            Text('$completedTasks de $dailyGoal tareas completadas'),
-
-            const SizedBox(height: 12),
-
-            // Barra de progreso
-            LinearProgressIndicator(
-              value: progress,
-              minHeight: 12,
-              borderRadius: BorderRadius.circular(10),
+          Text(
+            motivationalMessage,
+            style: const TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.w500,
               color: Colors.indigo,
-              backgroundColor: Colors.indigo.shade100,
             ),
+          ),
 
-            const SizedBox(height: 12),
+          const SizedBox(height: 24),
 
-            // Porcentaje de progreso
-            Text(
-              'Progreso: ${(progress * 100).toStringAsFixed(0)}%',
-              style: const TextStyle(
-                fontWeight: FontWeight.bold,
-                color: Colors.indigo,
+          Text(statusMessage),
+
+          const SizedBox(height: 20),
+
+          // TAREAS PENDIENTES
+          Card(
+            child: Padding(
+              padding: const EdgeInsets.all(20),
+              child: Row(
+                children: [
+                  const Icon(Icons.pending_actions, color: Colors.indigo),
+                  const SizedBox(width: 12),
+                  Text('Tareas pendientes: $pendingTasks'),
+                ],
               ),
             ),
+          ),
 
-            const SizedBox(height: 28),
-
-            // Botones de tareas
-            Wrap(
-              spacing: 12,
-              runSpacing: 12,
-              children: [
-                // Botón agregar tarea
-                ElevatedButton.icon(
-                  onPressed: _addTask,
-                  icon: const Icon(Icons.add),
-                  label: const Text('Agregar tarea'),
-                ),
-
-                // Botón completar tarea
-                OutlinedButton.icon(
-                  onPressed: pendingTasks == 0 ? null : _completeTask,
-                  icon: const Icon(Icons.done),
-                  label: const Text('Completar una tarea'),
-                ),
-              ],
+          // TAREAS COMPLETADAS
+          Card(
+            child: Padding(
+              padding: const EdgeInsets.all(20),
+              child: Row(
+                children: [
+                  const Icon(Icons.check_circle, color: Colors.green),
+                  const SizedBox(width: 12),
+                  Text('Tareas completadas: $completedTasks'),
+                ],
+              ),
             ),
+          ),
 
-            const SizedBox(height: 24),
+          const SizedBox(height: 24),
 
-            // Mensaje al alcanzar la meta
-            if (completedTasks >= dailyGoal)
-              const Card(
-                child: Padding(
-                  padding: EdgeInsets.all(16),
-                  child: Text(
-                    '¡Felicidades! Has alcanzado tu meta diaria.',
-                    style: TextStyle(
-                      color: Colors.green,
-                      fontWeight: FontWeight.bold,
-                    ),
+          // META DIARIA
+          Text('Mi meta diaria', style: Theme.of(context).textTheme.titleLarge),
+
+          const SizedBox(height: 12),
+
+          Text('$completedTasks de $dailyGoal tareas completadas'),
+
+          const SizedBox(height: 12),
+
+          LinearProgressIndicator(
+            value: progress,
+            minHeight: 12,
+            borderRadius: BorderRadius.circular(10),
+            color: Colors.indigo,
+            backgroundColor: Colors.indigo.shade100,
+          ),
+
+          const SizedBox(height: 12),
+
+          Text(
+            'Progreso: ${(progress * 100).toStringAsFixed(0)}%',
+            style: const TextStyle(
+              fontWeight: FontWeight.bold,
+              color: Colors.indigo,
+            ),
+          ),
+
+          const SizedBox(height: 24),
+
+          // BOTONES
+          Wrap(
+            spacing: 12,
+            runSpacing: 12,
+            children: [
+              ElevatedButton.icon(
+                onPressed: _addTask,
+                icon: const Icon(Icons.add),
+                label: const Text('Agregar tarea'),
+              ),
+
+              OutlinedButton.icon(
+                onPressed: pendingTasks == 0 ? null : _completeTask,
+                icon: const Icon(Icons.done),
+                label: const Text('Completar una tarea'),
+              ),
+            ],
+          ),
+
+          const SizedBox(height: 24),
+
+          // BOTÓN PARA ABRIR LA LISTA
+          ElevatedButton.icon(
+            onPressed: _openTaskList,
+            icon: const Icon(Icons.list),
+            label: const Text('Ver mis tareas'),
+          ),
+
+          const SizedBox(height: 24),
+
+          // MENSAJE AL ALCANZAR LA META
+          if (completedTasks >= dailyGoal)
+            const Card(
+              child: Padding(
+                padding: EdgeInsets.all(16),
+                child: Text(
+                  '¡Felicidades! Has alcanzado tu meta diaria.',
+                  style: TextStyle(
+                    color: Colors.green,
+                    fontWeight: FontWeight.bold,
                   ),
                 ),
               ),
-          ],
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+// COMPONENTE TASKCARD
+class TaskCard extends StatelessWidget {
+  const TaskCard({super.key, required this.task});
+
+  final Task task;
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      child: ListTile(
+        leading: Icon(
+          task.isCompleted ? Icons.check_circle : Icons.radio_button_unchecked,
+          color: task.isCompleted ? Colors.green : null,
         ),
+
+        title: Text(task.title),
+
+        subtitle: Text('${task.priority} · ${task.description}'),
+
+        trailing: const Icon(Icons.chevron_right),
+      ),
+    );
+  }
+}
+
+// NUEVA PANTALLA: LISTA DE TAREAS
+class TaskListScreen extends StatelessWidget {
+  const TaskListScreen({super.key, this.tasks = demoTasks});
+
+  final List<Task> tasks;
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Mis tareas'),
+        centerTitle: true,
+        backgroundColor: Colors.indigo,
+        foregroundColor: Colors.white,
+      ),
+
+      body: ListView.builder(
+        padding: const EdgeInsets.all(16),
+        itemCount: tasks.length,
+        itemBuilder: (context, index) {
+          final task = tasks[index];
+
+          return TaskCard(task: task);
+        },
       ),
     );
   }
