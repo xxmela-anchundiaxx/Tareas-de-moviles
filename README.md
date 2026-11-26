@@ -71,3 +71,22 @@ La aplicación gestiona los cuatro estados de red mediante `ChangeNotifier`, `co
 2. **Estado de Éxito (`success`):** Con conexión activa (`userId = 1`), se renderiza la lista remota de tareas. Al seleccionar un elemento, `GoRouter` navega a la pantalla de detalle mostrando el `id` y `title` correspondientes al ítem tocado.
 3. **Estado de Error y Reintento (`error`):** Se provocó activando el **Modo Avión** (desactivando Wi-Fi y datos móviles) en el emulador y pulsando **Actualizar** en la barra superior. La vista muestra el mensaje de fallo de red y habilita exclusivamente el botón **Reintentar**. Al restablecer la conexión y pulsar **Reintentar**, la lista se recupera sin reiniciar la aplicación.
 4. **Estado Vacío (`empty`):** Se provocó cambiando temporalmente la constante `userId` a `9999` en `TaskApiService` y ejecutando un *Hot Restart*. Como el servidor devuelve `200 OK` con un arreglo vacío `[]`, la interfaz muestra el mensaje **"Todavía no hay tareas"** y el botón **Actualizar** (sin mostrar el botón *Reintentar*, reservado únicamente para errores). Finalmente, se restauró `userId = 1`.
+
+## Avance Incremental: Formulario de Creación de Tareas (`/new`)
+
+Se implementó la pantalla `TaskFormScreen` junto con su ruta en `GoRouter` y el botón de acceso rápido desde `TaskListScreen` para gestionar la creación de tareas con validación de datos.
+
+### Características implementadas
+* **Enrutamiento (`GoRouter`):** Se registró la ruta estática `/new` en `appRouter` y se conectó mediante `context.push<TaskDraft>('/new')` desde un `FloatingActionButton.extended` en la pantalla principal.
+* **Controladores y ciclo de vida:** Uso de `TextEditingController` para los campos de título y descripción, liberando memoria correctamente en el método `dispose()`.
+* **Validación personalizada (`Form`):** Validaciones en tiempo real (`AutovalidateMode.onUserInteraction`) con mensajes específicos:
+  * **Título:** Obligatorio y mínimo 4 caracteres.
+  * **Descripción:** Obligatoria y mínimo 10 caracteres.
+* **Selector de prioridad:** Implementación de `DropdownButtonFormField<String>` con opciones predefinidas (`Alta`, `Media`, `Baja`).
+* **Fecha límite opcional (`showDatePicker`):** Selector de fecha integrado que permite asignar o limpiar una fecha límite sin bloquear el guardado si se deja vacía.
+* **Retorno de datos:** Al validar el formulario, se construye un objeto `TaskDraft` y se devuelve a `TaskListScreen` mediante `context.pop(draft)`, mostrando un `SnackBar` de confirmación.
+
+### Evidencias de pruebas realizadas
+1. **Validación de errores:** Intento de envío con campos vacíos o incompletos mostrando los mensajes de error personalizados en rojo.
+2. **Formulario válido:** Llenado correcto de título, descripción, selección de prioridad y elección de fecha opcional mediante el calendario (`showDatePicker`).
+3. **Mensaje de retorno:** Redirección automática a `Mis tareas` con visualización del `SnackBar` confirmando el título de la tarea creada.

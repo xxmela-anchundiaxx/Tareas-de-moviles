@@ -1,90 +1,202 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'package:provider/provider.dart';
 
-import 'tasks_view_model.dart';
+class TaskDraft {
+  final String title;
+  final String description;
+  final String priority;
+  final DateTime? dueDate;
 
-class TaskListScreen extends StatelessWidget {
-  const TaskListScreen({super.key});
+  const TaskDraft({
+    required this.title,
+    required this.description,
+    required this.priority,
+    this.dueDate,
+  });
+}
+
+class TaskFormScreen extends StatefulWidget {
+  const TaskFormScreen({super.key});
+
+  @override
+  State<TaskFormScreen> createState() => _TaskFormScreenState();
+}
+
+class _TaskFormScreenState extends State<TaskFormScreen> {
+  final _formKey = GlobalKey<FormState>();
+
+  final _titleController = TextEditingController();
+  final _descriptionController = TextEditingController();
+
+  String _selectedPriority = 'Media';
+  DateTime? _selectedDate;
+
+  final List<String> _priorities = ['Alta', 'Media', 'Baja'];
+
+  @override
+  void dispose() {
+    _titleController.dispose();
+    _descriptionController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _pickDate() async {
+    final now = DateTime.now();
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: _selectedDate ?? now,
+      firstDate: DateTime(now.year, now.month, now.day),
+      lastDate: DateTime(now.year + 5),
+      helpText: 'Selecciona fecha límite (opcional)',
+      cancelText: 'Cancelar',
+      confirmText: 'Aceptar',
+    );
+
+    if (picked != null) {
+      setState(() {
+        _selectedDate = picked;
+      });
+    }
+  }
+
+  void _submitForm() {
+    if (!_formKey.currentState!.validate()) return;
+
+    final draft = TaskDraft(
+      title: _titleController.text.trim(),
+      description: _descriptionController.text.trim(),
+      priority: _selectedPriority,
+      dueDate: _selectedDate,
+    );
+
+    context.pop(draft);
+  }
+
+  String _formatDate(DateTime date) {
+    final day = date.day.toString().padLeft(2, '0');
+    final month = date.month.toString().padLeft(2, '0');
+    return '$day/$month/${date.year}';
+  }
 
   @override
   Widget build(BuildContext context) {
-    final viewModel = context.watch<TasksViewModel>();
-
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Mis tareas'),
-        actions: [
-          IconButton(
-            tooltip: 'Actualizar tareas',
-            onPressed: viewModel.isLoading
-                ? null
-                : () => context.read<TasksViewModel>().loadTasks(),
-            icon: const Icon(Icons.refresh),
-          ),
-        ],
+        title: const Text('Nueva tarea'),
       ),
-      body: _buildBody(context, viewModel),
-    );
-  }
-
-  Widget _buildBody(BuildContext context, TasksViewModel viewModel) {
-    if (viewModel.isLoading) {
-      return const Center(child: CircularProgressIndicator());
-    }
-    if (viewModel.errorMessage != null) {
-      return Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(viewModel.errorMessage!),
-            const SizedBox(height: 12),
-            ElevatedButton(
-              onPressed: () => context.read<TasksViewModel>().loadTasks(),
-              child: const Text('Reintentar'),
-            ),
-          ],
-        ),
-      );
-    }
-    if (viewModel.isEmpty) {
-      return Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Text('Todavía no hay tareas para mostrar.'),
-            const SizedBox(height: 12),
-            ElevatedButton(
-              onPressed: () => context.read<TasksViewModel>().loadTasks(),
-              child: const Text('Actualizar'),
-            ),
-          ],
-        ),
-      );
-    }
-
-    return RefreshIndicator(
-      onRefresh: () => context.read<TasksViewModel>().loadTasks(),
-      child: ListView.builder(
-        physics: const AlwaysScrollableScrollPhysics(),
+      body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
-        itemCount: viewModel.tasks.length,
-        itemBuilder: (context, index) {
-          final task = viewModel.tasks[index];
-          return Card(
-            child: ListTile(
-              leading: Icon(
-                task.isCompleted
-                    ? Icons.check_circle
-                    : Icons.radio_button_unchecked,
+        child: Form(
+          key: _formKey,
+          autovalidateMode: AutovalidateMode.onUserInteraction,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              TextFormField(
+                controller: _titleController,
+                textInputAction: TextInputAction.next,
+                decoration: const InputDecoration(
+                  labelText: 'Título de la tarea *',
+                  hintText: 'Ej. Completar informe de auditoría',
+                  border: OutlineInputBorder(),
+                  prefixIcon: Icon(Icons.title),
+                ),
+                validator: (value) {
+                  final text = value?.trim() ?? '';
+                  if (text.isEmpty) {
+                    return 'Por favor, escribe un título para la tarea.';
+                  }
+                  if (text.length < 4) {
+                    return 'El título debe tener al menos 4 caracteres.';
+                  }
+                  return null;
+                },
               ),
-              title: Text(task.title),
-              subtitle: Text('Prioridad: ${task.priority}'),
-              trailing: const Icon(Icons.chevron_right),
-              onTap: () => context.push('/task/${task.id}'),
-            ),
-          );
-        },
+              const SizedBox(height: 16),
+              TextFormField(
+                controller: _descriptionController,
+                maxLines: 3,
+                decoration: const InputDecoration(
+                  labelText: 'Descripción *',
+                  hintText: 'Detalla qué se debe realizar...',
+                  border: OutlineInputBorder(),
+                  alignLabelWithHint: true,
+                ),
+                validator: (value) {
+                  final text = value?.trim() ?? '';
+                  if (text.isEmpty) {
+                    return 'La descripción no puede quedar vacía.';
+                  }
+                  if (text.length < 10) {
+                    return 'Describe la tarea con al menos 10 caracteres.';
+                  }
+                  return null;
+                },
+              ),
+              const SizedBox(height: 16),
+              DropdownButtonFormField<String>(
+                initialValue: _selectedPriority,
+                decoration: const InputDecoration(
+                  labelText: 'Prioridad',
+                  border: OutlineInputBorder(),
+                  prefixIcon: Icon(Icons.flag_outlined),
+                ),
+                items: _priorities.map((priority) {
+                  return DropdownMenuItem<String>(
+                    value: priority,
+                    child: Text(priority),
+                  );
+                }).toList(),
+                onChanged: (value) {
+                  if (value != null) {
+                    setState(() => _selectedPriority = value);
+                  }
+                },
+              ),
+              const SizedBox(height: 16),
+              Card(
+                elevation: 0,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                  side: BorderSide(color: Colors.grey.shade400),
+                ),
+                child: ListTile(
+                  leading: const Icon(Icons.calendar_today),
+                  title: Text(
+                    _selectedDate == null
+                        ? 'Fecha límite (opcional)'
+                        : 'Fecha límite: ${_formatDate(_selectedDate!)}',
+                  ),
+                  subtitle: Text(
+                    _selectedDate == null
+                        ? 'Sin fecha asignada'
+                        : 'Toca para cambiar la fecha',
+                  ),
+                  trailing: _selectedDate != null
+                      ? IconButton(
+                          tooltip: 'Quitar fecha',
+                          icon: const Icon(Icons.close),
+                          onPressed: () => setState(() => _selectedDate = null),
+                        )
+                      : TextButton(
+                          onPressed: _pickDate,
+                          child: const Text('Elegir'),
+                        ),
+                  onTap: _pickDate,
+                ),
+              ),
+              const SizedBox(height: 24),
+              FilledButton.icon(
+                onPressed: _submitForm,
+                icon: const Icon(Icons.save),
+                label: const Text('Guardar tarea'),
+                style: FilledButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
