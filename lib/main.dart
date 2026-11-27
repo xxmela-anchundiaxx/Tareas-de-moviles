@@ -8,7 +8,9 @@ import 'features/tasks/data/task_repository.dart';
 import 'features/tasks/presentation/tasks_view_model.dart';
 
 void main() {
-  final TaskRepository repository = RemoteTaskRepository(TaskApiService());
+  final TaskRepository repository = RemoteTaskRepository(
+    apiService: TaskApiService(),
+  );
 
   runApp(
     ChangeNotifierProvider<TasksViewModel>(

@@ -142,7 +142,7 @@ class _TaskFormScreenState extends State<TaskFormScreen> {
 
               // 3. Selector de Prioridad (DropdownButtonFormField)
               DropdownButtonFormField<String>(
-                value: _selectedPriority,
+                initialValue: _selectedPriority,
                 decoration: const InputDecoration(
                   labelText: 'Prioridad',
                   border: OutlineInputBorder(),

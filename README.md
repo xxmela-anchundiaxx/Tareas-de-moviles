@@ -90,3 +90,16 @@ Se implementó la pantalla `TaskFormScreen` junto con su ruta en `GoRouter` y el
 1. **Validación de errores:** Intento de envío con campos vacíos o incompletos mostrando los mensajes de error personalizados en rojo.
 2. **Formulario válido:** Llenado correcto de título, descripción, selección de prioridad y elección de fecha opcional mediante el calendario (`showDatePicker`).
 3. **Mensaje de retorno:** Redirección automática a `Mis tareas` con visualización del `SnackBar` confirmando el título de la tarea creada.
+
+## Operaciones CRUD y Persistencia Simulada (Sesión 10)
+
+TaskFlow implementa el ciclo completo de gestión de tareas conectado a la API REST de JSONPlaceholder mediante **Dio**, siguiendo la arquitectura **MVVM**:
+
+- **Crear (`POST /todos`):** Desde el formulario `/new` (`TaskFormScreen`), se envía un mapa JSON con `title`, `completed` y `userId`. Al recibir respuesta exitosa, `TasksViewModel` incorpora la tarea en memoria (conservando localmente `description` y `priority`) y muestra el `SnackBar` *"Tarea creada"*.
+- **Editar (`PATCH /todos/:id`):** En `TaskDetailScreen`, el diálogo *"Editar título"* actualiza el recurso en la API usando `Task.copyWith(title: ...)` y refresca la vista tras confirmar el `await` con el `SnackBar` *"Tarea actualizada"*.
+- **Eliminar (`DELETE /todos/:id`):** Solicita confirmación mediante un `AlertDialog` antes de ejecutar la petición HTTP; solo si la API responde sin error se remueve la tarea del estado y se navega de vuelta a la lista con `context.pop()`.
+
+### Limitación de JSONPlaceholder (Escrituras Simuladas)
+JSONPlaceholder es una API pública de pruebas que **simula** las operaciones `POST`, `PATCH` y `DELETE` devolviendo respuestas HTTP exitosas (`201 Created` o `200 OK`), pero **no persiste los cambios en su base de datos real**. Por este motivo:
+1. Los cambios se mantienen sincronizados en el estado en memoria de `RemoteTaskRepository` y `TasksViewModel` mientras la aplicación está abierta.
+2. Al reiniciar la aplicación o recargar la lista desde la red (`GET /todos`), las tareas creadas desaparecen y las editadas o eliminadas regresan a su estado original en el servidor.
